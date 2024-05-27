@@ -57,8 +57,8 @@ int main()
                     for(int i=0;i<nLow;i++)
                         diff += localWord1[i] != localWord2[i];
 
-                    // need to copy (i,j) to (j,i) later
-                    if(i<j)
+                    // need to copy (i,j) to (j,i) later because they are same
+                    if(threadId<j)
                     {
                         if(diff>1)
                         {
