@@ -15,7 +15,7 @@ int main()
 
         GPGPU::Computer computer(GPGPU::Computer::DEVICE_GPUS); 
 
-        // cosine similarity for 400k vectors (each 100 elements) vs 1 vector
+
         computer.compile(
             
             R"(
@@ -99,8 +99,6 @@ int main()
                 computer.compute(kernelParams, "findNeightbors", 0, numWords, 100);
                 
                 std::cout << (int)matrix.access<char>(1000) << std::endl;
-                // 26th vector's similarity is available at:
-                // float sim = similarity[25 * 100]
             }
             std::cout << nanoSeconds / 1000000000.0f << " seconds" << std::endl; 
         }
