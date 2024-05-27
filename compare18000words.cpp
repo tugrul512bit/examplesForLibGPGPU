@@ -56,13 +56,18 @@ int main()
                     int diff = abs(wLength1 - wLength2);
                     for(int i=0;i<nLow;i++)
                         diff += localWord1[i] != localWord2[i];
-                    if(diff>1)
+
+                    // need to copy (i,j) to (j,i) later
+                    if(i<j)
                     {
-                        matrix[threadId + j*18000]=0;
-                    }
-                    else
-                    {
-                        matrix[threadId + j*18000]=1;
+                        if(diff>1)
+                        {
+                            matrix[threadId + j*18000]=0;
+                        }
+                        else
+                        {
+                            matrix[threadId + j*18000]=1;
+                        }
                     }
                 }
 
