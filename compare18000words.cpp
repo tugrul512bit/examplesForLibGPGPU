@@ -72,7 +72,7 @@ int main()
         auto data = computer.createArrayInput<char>("data", bufferSize);        
         auto start = computer.createArrayInput<int>("start", numWords);
         auto length = computer.createArrayInput<int>("length", numWords);
-        auto matrix = computer.createArrayOutput<char>("matrix", numWords*numWords,180);
+        auto matrix = computer.createArrayOutput<char>("matrix", numWords*numWords);
         int currentIndex = 0;
         for (int i = 0; i < numWords; i++)
         {
@@ -95,7 +95,7 @@ int main()
             size_t nanoSeconds;
             {
                 GPGPU::Bench bench(&nanoSeconds);
-                computer.compute(kernelParams, "findNeightbors", 0, numWords, 100);
+                computer.compute(kernelParams, "findNeightbors", 0, numWords, 180 /* exact divider of numWords */);
                 
                 std::cout << (int)matrix.access<char>(1000) << std::endl;
             }
