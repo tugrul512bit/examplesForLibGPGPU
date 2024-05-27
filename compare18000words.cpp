@@ -65,7 +65,6 @@ int main()
                         matrix[threadId + j*18000]=1;
                     }
                 }
-                barrier(CLK_LOCAL_MEM_FENCE);
 
 
              })", "findNeightbors");
