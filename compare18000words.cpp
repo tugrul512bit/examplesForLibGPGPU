@@ -96,7 +96,8 @@ int main()
             {
                 GPGPU::Bench bench(&nanoSeconds);
                 computer.compute(kernelParams, "findNeightbors", 0, numWords, 180 /* exact divider of numWords */);
-                
+
+                // word-0 vs word-1000 comparison result (same as word-1000 vs word-0)
                 std::cout << (int)matrix.access<char>(1000) << std::endl;
             }
             std::cout << nanoSeconds / 1000000000.0f << " seconds" << std::endl; 
