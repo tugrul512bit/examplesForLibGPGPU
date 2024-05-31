@@ -1,6 +1,6 @@
 // video memory bandwidth test
-// rtx4070: 430 GB/s for read+write of 32-bit integers
-// requires 8GB video memory
+// rtx4070: 444 GB/s for read+write for 32-bit integers & 1M threads
+// requires 4GB video memory
 
 #include <iostream>
 #include <fstream>
@@ -10,25 +10,31 @@ int main()
 {
     try
     {
-        const size_t n = 1024*1024*1024;
+        const size_t n = 1024*1024*512;
 
         // 0-index = first graphics card
         GPGPU::Computer computer(GPGPU::Computer::DEVICE_GPUS,0);
         computer.compile(
+            "#define N_BUFFER "+std::to_string(n)+"ull" +
+
             R"(
+
             kernel void bandwidth( 
                 global int * data1,
                 global int * data2) 
             { 
                 const int threadId=get_global_id(0); 
-                const int n = 1024*1024*1024;
-                #pragma unroll 32
-                for(int i=0;i<n;i+=1024*1024)
+
+                for(int i=0;i<N_BUFFER;i+=1024*1024)
                     data2[threadId + i]=data1[threadId + i];
 
-             }
+            }
+
         )", "bandwidth");
 
+        // createArrayState does not make any pcie-transfer. its for keeping states within graphics card
+        // createArrayInput: input data of kernel, copied from RAM to VRAM
+        // createArrayOutput: output data of kernel, copied from VRAM to RAM
         auto data1 = computer.createArrayState<int>("data1", n);
         auto data2 = computer.createArrayState<int>("data2", n);
         auto kernelParams = data1.next(data2);
