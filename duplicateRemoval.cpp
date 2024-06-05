@@ -1,22 +1,24 @@
 /*
- brute-force for 100k elements:
- number of unique elements = 62900
-percentage of unique elements = 62.9%
+ brute-force for 100k elements, RTX4070, Ryzen 7900:
+
+n=100000
+number of unique elements = 63247
+percentage of unique elements = 63.247%
 -------------------------------------------------
-cpu duplicate removal =0.0138678s
-number of uniques after duplicate removal = 62900
+cpu duplicate removal =0.0132665s
+number of uniques after duplicate removal = 63247
 -------------------------------------------------
-cpu duplicate removal (optimized) =0.0103347s
-number of uniques after duplicate removal = 62900
+cpu duplicate removal (optimized) =0.0103982s
+number of uniques after duplicate removal = 63247
 -------------------------------------------------
-cpu duplicate removal (optimized+) =0.0043014s
-number of uniques after duplicate removal = 62900
+cpu duplicate removal (optimized+) =0.0042275s
+number of uniques after duplicate removal = 63247
 -------------------------------------------------
-cpu duplicate removal multithreaded =0.0182354s
-number of uniques after duplicate removal = 62900
+cpu duplicate removal multithreaded =0.0199999s
+number of uniques after duplicate removal = 63247
 -------------------------------------------------
-gpu duplicate removal brute-force O(N^2)=0.0075971s
-number of uniques after duplicate removal = 62900
+gpu duplicate removal brute-force O(N^2)=0.0022068s
+number of uniques after duplicate removal = 63247
 -------------------------------------------------
 */
 
@@ -163,6 +165,10 @@ std::vector<int> RemoveDuplicatesCpuMulti(std::vector<int> dup)
 // gpu-accelerated duplicate removal
 struct GpuDuplicateRemover
 {
+    GPGPU::Computer computer;
+    GPGPU::HostParameter input, output, numElements, kernelParams;
+    int n;
+
     GpuDuplicateRemover(const int nElements=1000000):computer(GPGPU::Computer::DEVICE_GPUS, 0/*select only first gpu*/),n(nElements)
     {
         try
@@ -173,26 +179,34 @@ struct GpuDuplicateRemover
             kernel void findDuplicate(const global int * input, global int * output, const int numElements) 
             { 
                 const int threadId=get_global_id(0); 
-                if(threadId >= numElements) return;
-                const int val = input[threadId];
-                int repeats = 0;
+                const int localThreadId = threadId % 256;
+         
+                const int val = ((threadId<numElements)?input[threadId]:-100000000);
+                local int cache[256];
                 int firstIndex = -1;
-                for(int i=0;i<numElements;i++)
+                for(int i=0;i<numElements+512;i+=256)
                 {                   
-                    if(val == input[i])
+                    barrier(CLK_LOCAL_MEM_FENCE);
+                    if(i+localThreadId<numElements)
+                        cache[localThreadId] = input[i+localThreadId];
+                    else
+                        cache[localThreadId] = -1;
+                    barrier(CLK_LOCAL_MEM_FENCE);
+                    if(firstIndex == -1)
+                        for(int j=0;j<256;j++)
+                                firstIndex = ((val == cache[j])?(i+j):firstIndex);
+                }
+
+                if(threadId < numElements)
+                {
+                    if(threadId == firstIndex)
                     {
-                        if(firstIndex == -1)
-                            firstIndex = i;
-                        repeats++;
+                        output[threadId]=val;
                     }
-                }
-                if(threadId == firstIndex)
-                {
-                    output[threadId]=val;
-                }
-                else
-                {
-                    output[threadId]=-repeats;
+                    else
+                    {
+                        output[threadId]=-1;
+                    }
                 }
             }
 
@@ -210,9 +224,7 @@ struct GpuDuplicateRemover
         }
     }
 
-    GPGPU::Computer computer;
-    GPGPU::HostParameter input, output, numElements, kernelParams;
-    int n;
+
     std::vector<int> RemoveDuplicatesGpuBruteForce(std::vector<int> dup)
     {
         try
